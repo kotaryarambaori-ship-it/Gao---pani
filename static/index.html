@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gaon Pani Sewa</title>
+<style>
+:root{--ink:#1d1d1b;--bg:#f4f4f2;--card:#fff;--mute:#555;--line:#1d1d1b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,sans-serif;padding-bottom:84px}
+main{max-width:480px;margin:0 auto;padding:24px 16px}
+h1{margin:0 0 4px;font-size:26px}
+.sub{color:var(--mute);font-size:14px;margin-bottom:16px}
+section{display:none}section.on{display:block}
+.card{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.tag{border:1.5px solid var(--line);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;background:#e2e2de}
+.mute{color:var(--mute);font-size:13px}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+button.big,select,input,textarea{min-height:48px;border:1.5px solid var(--line);border-radius:10px;background:#fff;padding:0 12px;width:100%}
+textarea{padding:10px;height:80px}
+button.big{font-weight:600;cursor:pointer;margin-bottom:10px}
+button.dark{background:var(--ink);color:#fff}
+button.opt.sel{background:var(--ink);color:#fff}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.grid button{min-height:100px;font-weight:700;border-radius:14px;border:1.5px solid var(--line);background:#fff;cursor:pointer}
+label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
+nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1.5px solid var(--line);display:flex}
+nav button{flex:1;min-height:60px;border:0;background:none;font-size:13px;cursor:pointer}
+nav button.on{font-weight:700;background:#e2e2de}
+img.ph{max-width:100%;border-radius:8px;margin-top:8px}
+.msg{padding:10px;border-radius:10px;margin-bottom:10px;border:1.5px solid var(--line);background:#e2e2de}
+</style>
+</head>
+<body>
+<main>
+<section id="home" class="on">
+  <h1>Gaon Pani Sewa</h1><div class="sub">[Gaon ka naam] &middot; Panchayat</div>
+  <div class="card" id="nextTanker"><div class="mute">Tanker ki jaankari</div><strong>Load ho raha hai...</strong></div>
+  <div class="grid">
+    <button data-go="shikayat">Shikayat karo</button>
+    <button data-go="tanker">Tanker time</button>
+    <button data-go="status">Meri shikayat</button>
+    <button id="adminBtn">Panchayat login</button>
+  </div>
+  <div class="mute" id="adminState"></div>
+</section>
+
+<section id="shikayat">
+  <h1>Shikayat karo</h1><div class="sub">Problem chuno aur photo lagao</div>
+  <div id="fmsg"></div>
+  <button class="big opt" data-type="handpump">Handpump kharab</button>
+  <button class="big opt" data-type="no_water">Pani nahi aa raha</button>
+  <button class="big opt" data-type="dirty_water">Pani ganda hai</button>
+  <label for="mohalla">Mohalla</label>
+  <select id="mohalla"></select>
+  <label for="photo">Photo (zaroori nahi)</label>
+  <input id="photo" type="file" accept="image/*" capture="environment">
+  <label for="note">Kuch likhna ho (zaroori nahi)</label>
+  <textarea id="note" maxlength="500"></textarea>
+  <button class="big dark" id="send" style="margin-top:12px">Shikayat bhejo</button>
+</section>
+
+<section id="tanker"><h1>Tanker ka samay</h1><div class="sub">Aaj ka schedule</div><div id="tlist"></div></section>
+<section id="status"><h1>Meri shikayatein</h1><div class="sub" id="ssub">Kab bheji aur ab kya hua</div><div id="clist"></div></section>
+</main>
+
+<nav>
+  <button data-go="home" class="on">Home</button>
+  <button data-go="shikayat">Shikayat</button>
+  <button data-go="tanker">Tanker</button>
+  <button data-go="status">Status</button>
+</nav>
+
+<script>
+const LABEL={handpump:"Handpump kharab",no_water:"Pani nahi aa raha",dirty_water:"Pani ganda hai"};
+const ST={naya:"Naya",kaam_chalu:"Kaam chalu",theek_hua:"Theek hua"};
+const TS={baaki:"Baaki",raste_mein:"Raste mein",aa_gaya:"Aa gaya"};
+const $=s=>document.querySelector(s);
+let admin=sessionStorage.getItem("ak")||"";
+let selType="";
+let tankers=[];
+
+function el(tag,props={},...kids){const e=document.createElement(tag);Object.assign(e,props);e.append(...kids);return e}
+function mine(){try{return JSON.parse(localStorage.getItem("mine")||"[]")}catch{return[]}}
+async function api(url,opt={}){
+  opt.headers={...(opt.headers||{}),"X-Admin-Key":admin};
+  const r=await fetch(url,opt);
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||"Kuch gadbad hui");
+  return d;
+}
+function select(map,val){
+  const s=el("select");
+  for(const k in map){const o=el("option",{value:k,textContent:map[k]});if(k===val)o.selected=true;s.append(o)}
+  return s;
+}
+
+function go(name){
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id===name));
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.go===name));
+  if(name==="home"||name==="tanker")loadTankers();
+  if(name==="status")loadComplaints();
+  window.scrollTo(0,0);
+}
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+
+/* ----- tankers ----- */
+async function loadTankers(){
+  tankers=await api("/api/tankers");
+  const m=$("#mohalla");
+  if(!m.options.length){
+    m.append(el("option",{value:"",textContent:"Mohalla chuno"}));
+    tankers.forEach(t=>m.append(el("option",{value:t.mohalla,textContent:t.mohalla})));
+  }
+  const next=tankers.find(t=>t.status==="raste_mein")||tankers.find(t=>t.status==="baaki");
+  const box=$("#nextTanker");box.textContent="";
+  box.append(el("div",{className:"mute",textContent:"Agla tanker"}),
+    el("strong",{textContent:next?`${next.mohalla} · ${next.time||"samay baad mein"}`:"Aaj ke sab tanker aa gaye"}));
+  const list=$("#tlist");list.textContent="";
+  tankers.forEach(t=>{
+    const card=el("div",{className:"card"});
+    if(admin){
+      const time=el("input",{value:t.time,placeholder:"Samay, jaise 5:00 PM"});
+      const st=select(TS,t.status);
+      const save=el("button",{className:"big dark",textContent:"Save",onclick:async()=>{
+        try{await api("/api/tankers/"+t.id,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({time:time.value,status:st.value})});save.textContent="Ho gaya";}
+        catch(e){alert(e.message)}}});
+      card.append(el("strong",{textContent:t.mohalla}),time,st,save);
+    }else{
+      card.append(el("div",{className:"row"},
+        el("div",{},el("strong",{textContent:t.mohalla}),el("div",{className:"mute",textContent:t.time||"Samay baad mein"})),
+        el("span",{className:"tag",textContent:TS[t.status]})));
+    }
+    list.append(card);
+  });
+}
+
+/* ----- photo chhoti karna (data bachane ke liye) ----- */
+function shrink(file,max=1000){return new Promise((ok,no)=>{
+  const img=new Image();
+  img.onload=()=>{const k=Math.min(1,max/Math.max(img.width,img.height));
+    const c=document.createElement("canvas");c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);ok(c.toDataURL("image/jpeg",0.8))};
+  img.onerror=()=>no(new Error("Photo nahi khuli"));
+  img.src=URL.createObjectURL(file);})}
+
+/* ----- complaint form ----- */
+document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{
+  selType=b.dataset.type;
+  document.querySelectorAll(".opt").forEach(x=>x.classList.toggle("sel",x===b));
+});
+$("#send").onclick=async()=>{
+  const box=$("#fmsg");box.textContent="";
+  try{
+    const body={type:selType,mohalla:$("#mohalla").value,note:$("#note").value};
+    const f=$("#photo").files[0];
+    if(f)body.photo=await shrink(f);
+    const d=await api("/api/complaints",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    localStorage.setItem("mine",JSON.stringify([d.id,...mine()]));
+    $("#note").value="";$("#photo").value="";selType="";
+    document.querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));
+    go("status");
+  }catch(e){box.append(el("div",{className:"msg",textContent:e.message}))}
+};
+
+/* ----- complaint list ----- */
+async function loadComplaints(){
+  const list=$("#clist");list.textContent="";
+  $("#ssub").textContent=admin?"Sabhi shikayatein (Panchayat)":"Kab bheji aur ab kya hua";
+  const ids=mine();
+  if(!admin&&!ids.length){list.append(el("div",{className:"mute",textContent:"Abhi koi shikayat nahi bheji."}));return}
+  const data=await api(admin?"/api/complaints":"/api/complaints?ids="+ids.join(","));
+  data.forEach(c=>{
+    const card=el("div",{className:"card"});
+    const head=el("div",{className:"row"},el("strong",{textContent:LABEL[c.type]}),
+      admin?"":el("span",{className:"tag",textContent:ST[c.status]}));
+    card.append(head,el("div",{className:"mute",textContent:`${c.mohalla} · ${c.created_at}`}));
+    if(c.note)card.append(el("div",{textContent:c.note}));
+    if(c.photo)card.append(el("img",{className:"ph",src:"/uploads/"+c.photo,alt:"Shikayat ki photo"}));
+    if(admin){
+      const st=select(ST,c.status);
+      st.onchange=async()=>{try{await api("/api/complaints/"+c.id,{method:"PATCH",headers:{"Content-Type":"application/json"},body:JSON.stringify({status:st.value})})}catch(e){alert(e.message)}};
+      card.append(st);
+    }
+    list.append(card);
+  });
+}
+
+/* ----- panchayat login ----- */
+function adminUI(){
+  $("#adminBtn").textContent=admin?"Panchayat logout":"Panchayat login";
+  $("#adminState").textContent=admin?"Panchayat mode chalu hai":"";
+}
+$("#adminBtn").onclick=()=>{
+  if(admin){admin="";sessionStorage.removeItem("ak")}
+  else{const k=prompt("Panchayat password");if(k){admin=k;sessionStorage.setItem("ak",k)}}
+  adminUI();loadTankers();
+};
+adminUI();loadTankers();
+</script>
+</body>
+  </html>
