@@ -5,31 +5,42 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Gaon Pani Sewa</title>
 <style>
-:root{--ink:#1d1d1b;--bg:#f4f4f2;--card:#fff;--mute:#555;--line:#1d1d1b}
+:root{--ink:#1d1d1b;--bg:#eef6fb;--card:#fff;--mute:#4a4a48;--line:#1d1d1b;--blue:#1971c2;--navy:#0b4a82}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px system-ui,sans-serif;padding-bottom:84px}
 main{max-width:480px;margin:0 auto;padding:24px 16px}
-h1{margin:0 0 4px;font-size:26px}
+h1{margin:0 0 4px;font-size:26px;color:var(--navy)}
 .sub{color:var(--mute);font-size:14px;margin-bottom:16px}
 section{display:none}section.on{display:block}
 .card{background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+#nextTanker{background:#d0ebff;border-color:var(--navy)}
 .row{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .tag{border:1.5px solid var(--line);border-radius:8px;padding:4px 10px;font-size:13px;font-weight:600;background:#e2e2de}
+.s-naya,.t-baaki{background:#fff3bf;color:#5c4400}
+.s-kaam_chalu,.t-raste_mein{background:#d0ebff;color:var(--navy)}
+.s-theek_hua,.t-aa_gaya{background:#d3f9d8;color:#1b5e20}
 .mute{color:var(--mute);font-size:13px}
 button,select,input,textarea{font:inherit;color:var(--ink)}
 button.big,select,input,textarea{min-height:48px;border:1.5px solid var(--line);border-radius:10px;background:#fff;padding:0 12px;width:100%}
 textarea{padding:10px;height:80px}
 button.big{font-weight:600;cursor:pointer;margin-bottom:10px}
-button.dark{background:var(--ink);color:#fff}
-button.opt.sel{background:var(--ink);color:#fff}
+button.opt:nth-of-type(1){background:#fff4e6}
+button.opt:nth-of-type(2){background:#e7f5ff}
+button.opt:nth-of-type(3){background:#f3f0ff}
+button.dark{background:var(--blue);color:#fff;border-color:var(--navy)}
+button.opt.sel{background:var(--navy);color:#fff}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
-.grid button{min-height:100px;font-weight:700;border-radius:14px;border:1.5px solid var(--line);background:#fff;cursor:pointer}
+.grid button{min-height:100px;font-weight:700;border-radius:14px;border:2px solid var(--line);cursor:pointer}
+.grid button:nth-child(1){background:#ffe8cc;border-color:#c2410c;color:#7c2d12}
+.grid button:nth-child(2){background:#d0ebff;border-color:var(--navy);color:var(--navy)}
+.grid button:nth-child(3){background:#d3f9d8;border-color:#2b8a3e;color:#1b5e20}
+.grid button:nth-child(4){background:#e5dbff;border-color:#5f3dc4;color:#3b2a8c}
 label{display:block;font-size:13px;color:var(--mute);margin:8px 0 4px}
 nav{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1.5px solid var(--line);display:flex}
 nav button{flex:1;min-height:60px;border:0;background:none;font-size:13px;cursor:pointer}
-nav button.on{font-weight:700;background:#e2e2de}
+nav button.on{font-weight:700;background:#d0ebff;color:var(--navy)}
 img.ph{max-width:100%;border-radius:8px;margin-top:8px}
-.msg{padding:10px;border-radius:10px;margin-bottom:10px;border:1.5px solid var(--line);background:#e2e2de}
+.msg{padding:10px;border-radius:10px;margin-bottom:10px;border:1.5px solid #a61e1e;background:#ffe3e3;color:#5c1010}
 </style>
 </head>
 <body>
@@ -130,7 +141,7 @@ async function loadTankers(){
     }else{
       card.append(el("div",{className:"row"},
         el("div",{},el("strong",{textContent:t.mohalla}),el("div",{className:"mute",textContent:t.time||"Samay baad mein"})),
-        el("span",{className:"tag",textContent:TS[t.status]})));
+        el("span",{className:"tag t-"+t.status,textContent:TS[t.status]})));
     }
     list.append(card);
   });
@@ -174,7 +185,7 @@ async function loadComplaints(){
   data.forEach(c=>{
     const card=el("div",{className:"card"});
     const head=el("div",{className:"row"},el("strong",{textContent:LABEL[c.type]}),
-      admin?"":el("span",{className:"tag",textContent:ST[c.status]}));
+      admin?"":el("span",{className:"tag s-"+c.status,textContent:ST[c.status]}));
     card.append(head,el("div",{className:"mute",textContent:`${c.mohalla} · ${c.created_at}`}));
     if(c.note)card.append(el("div",{textContent:c.note}));
     if(c.photo)card.append(el("img",{className:"ph",src:"/uploads/"+c.photo,alt:"Shikayat ki photo"}));
